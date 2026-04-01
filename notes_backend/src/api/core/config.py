@@ -8,12 +8,13 @@ class Settings:
     """Application settings resolved from environment variables.
 
     Contract:
-    - Inputs: environment variables (POSTGRES_URL, POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB, POSTGRES_PORT)
+    - Inputs: environment variables (POSTGRES_URL, POSTGRES_HOST, POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB, POSTGRES_PORT)
     - Outputs: normalized, typed settings, including an async SQLAlchemy database URL.
     - Errors: ValueError when required DB settings are missing.
     """
 
     postgres_url: str | None
+    postgres_host: str | None
     postgres_user: str | None
     postgres_password: str | None
     postgres_db: str | None
@@ -21,7 +22,12 @@ class Settings:
 
     @property
     def sqlalchemy_async_database_url(self) -> str:
-        """Build an async SQLAlchemy URL for psycopg (PostgreSQL)."""
+        """Build an async SQLAlchemy URL for psycopg (PostgreSQL).
+
+        Notes:
+            - Prefer POSTGRES_URL when available.
+            - Otherwise build from parts; POSTGRES_HOST defaults to 'localhost'.
+        """
         # Prefer explicit URL if provided.
         if self.postgres_url:
             url = self.postgres_url.strip()
@@ -50,7 +56,7 @@ class Settings:
                 f"Database configuration missing required variables: {', '.join(missing)}"
             )
 
-        host = "localhost"
+        host = (self.postgres_host or "localhost").strip() or "localhost"
         user = quote_plus(self.postgres_user or "")
         password = quote_plus(self.postgres_password or "")
         db = quote_plus(self.postgres_db or "")
@@ -70,6 +76,7 @@ def get_settings() -> Settings:
     """
     return Settings(
         postgres_url=os.getenv("POSTGRES_URL"),
+        postgres_host=os.getenv("POSTGRES_HOST"),
         postgres_user=os.getenv("POSTGRES_USER"),
         postgres_password=os.getenv("POSTGRES_PASSWORD"),
         postgres_db=os.getenv("POSTGRES_DB"),
